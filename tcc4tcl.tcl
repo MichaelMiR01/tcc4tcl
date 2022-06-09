@@ -848,4 +848,4 @@ proc ::tcc4tcl::wrap {name adefs rtype {body "#"} {cname ""} {includePrototype 0
 
 namespace eval tcc4tcl {namespace export cproc}
 
-package provide tcc4tcl "@@VERS@@"
+package provide tcc4tcl "0.30"

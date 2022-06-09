@@ -1,5 +1,5 @@
 dnl Define ourselves
-AC_INIT(tcc4tcl, @@VERS@@)
+AC_INIT(tcc4tcl, 0.30)
 
 dnl Default prefix should be "UNSPECIFIED" to use magic in the Makefile
 ac_default_prefix="UNSPECIFIED"
