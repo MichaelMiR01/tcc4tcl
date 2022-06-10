@@ -46,7 +46,7 @@
 #include <time.h>
 
 #ifndef _WIN32
-# include <unistd.h>
+/*@ include <unistd.h>*/
 # include <sys/time.h>
 # ifndef __ANDROID__
 #  include <sys/ucontext.h>

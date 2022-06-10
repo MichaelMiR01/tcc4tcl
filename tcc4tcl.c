@@ -19,9 +19,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <tcl.h>
+#define USE_TCL_STUBS
 #include <stdlib.h>
+#include <tcl.h>
+#include <tclInt.h>
+
 #include "tcc.h"
+
 
 struct TclTCCState {
 	TCCState *s;
@@ -255,6 +259,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
             }
             tcc_undefine_symbol(s,Tcl_GetString(objv[2]));
             return TCL_OK;
+        
         default:
             Tcl_Panic("internal error during option lookup");
     }
@@ -291,6 +296,7 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	if (index == TCC_OUTPUT_MEMORY) {
 		/* Only add this symbol if we are compiling to memory */
 		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
+		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
 	}
 
 	tcc_define_symbol(s, "USE_TCL_STUBS", "1");

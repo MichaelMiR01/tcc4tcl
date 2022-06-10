@@ -17,12 +17,16 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#define USE_TCL_STUBS 1
+#include <tcl.h>
+#include "config.h"
 
 #ifdef ONE_SOURCE
 #include "libtcc.c"
 #else
 #include "tcc.h"
 #endif
+
 
 static void help(void)
 {
@@ -248,7 +252,8 @@ int main(int argc, char **argv)
     int64_t start_time = 0;
     const char *first_file = NULL;
 
-#ifdef USE_TCL_STUBS
+#ifdef __USE_TCL_STUBS__
+// what is this?
 #undef Tcl_CreateInterp
 #undef Tcl_InitStubs
     Tcl_Interp *interp;
