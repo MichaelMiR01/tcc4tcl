@@ -18,14 +18,14 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+#ifndef USE_TCL_STUBS
 #define USE_TCL_STUBS
-#include <stdlib.h>
+#endif
+
 #include <tcl.h>
+#include <stdlib.h>
 #include <tclInt.h>
-
 #include "tcc.h"
-
 
 struct TclTCCState {
 	TCCState *s;
@@ -259,7 +259,6 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
             }
             tcc_undefine_symbol(s,Tcl_GetString(objv[2]));
             return TCL_OK;
-        
         default:
             Tcl_Panic("internal error during option lookup");
     }
@@ -294,9 +293,10 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 
 #ifdef USE_TCL_STUBS
 	if (index == TCC_OUTPUT_MEMORY) {
-		/* Only add this symbol if we are compiling to memory */
+		/* Only add these symbols if we are compiling to memory */
 		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
 		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
+		tcc_add_symbol(s, "Tcl_InitStubs", &Tcl_InitStubs);
 	}
 
 	tcc_define_symbol(s, "USE_TCL_STUBS", "1");

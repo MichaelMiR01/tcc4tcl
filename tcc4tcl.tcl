@@ -5,6 +5,7 @@ namespace eval tcc4tcl {
 	variable count
 	variable loadedfrom
 	set dir [file dirname [info script]]
+	#puts "TCC DIR IS $dir"
 	if {[info command ::tcc4tcl] == ""} {
 		catch { 
 		    load {} tcc4tcl 
@@ -60,7 +61,6 @@ namespace eval tcc4tcl {
 		}
 
 		array set $handle [list code "" type $type filename $output package $pkgName add_inc_path "" add_lib_path "" add_lib "" add_file "" add_macros ""]
-		_process_command_line $handle $::argv
 
 		proc $handle {cmd args} [string map [list @@HANDLE@@ $handle] {
 			set handle {@@HANDLE@@}
@@ -480,22 +480,47 @@ namespace eval tcc4tcl {
 	}
 
 	proc _go {handle {outputOnly 0}} {
-		variable dir
-		variable hasTK 0
-
-		upvar #0 $handle state
-		$handle add_include_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/include/"
-        $handle add_include_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/include/winapi"
-        $handle add_include_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/include/generic"
-        $handle add_include_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/include/generic/win"
-        $handle add_include_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/include/xlib"
-
-		set code ""
-
+        variable dir
+        variable hasTK 0
+        puts "Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
+        switch -glob -- $::tcl_platform(os)-$::tcl_platform(pointerSize) {
+            "Linux-*" {
+                puts "Linux"
+                $handle add_include_path  "/usr/include/"
+                $handle add_include_path  "/usr/include/x86_64-linux-gnu"
+                $handle add_include_path  "${dir}/include/generic"
+                $handle add_include_path  "${dir}/include/xlib"
+                $handle add_include_path  "${dir}/include/generic/unix"
+                set outfileext so
+                set tclstub tclstub86_64
+                set tkstub tkstub86_64
+                set DLLEXPORT "__attribute__ ((visibility(\"default\")))"
+            }
+            "Windows*" {
+                puts "Windows"
+                $handle add_include_path  "${dir}/include/"
+                $handle add_include_path  "${dir}/include/generic"
+                $handle add_include_path  "${dir}/include/xlib"
+                $handle add_include_path  "${dir}/include/winapi"
+                $handle add_include_path  "${dir}/include/generic/win"
+                set outfileext dll
+                set tclstub tclstub86elf
+                set tkstub tkstub86elf
+                set DLLEXPORT "__declspec(dllexport)"
+            }
+            default {
+                puts "Unknow Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
+                return
+            }
+        }
+        
+        upvar #0 $handle state
+        
+        set code ""
+        
 		foreach {macroName macroVal} $state(add_macros) {
 			append code "#define [string trim "$macroName $macroVal"]\n"
 		}
-
 		append code $state(code) "\n"
 
 		if {$state(type) == "exe" || $state(type) == "dll"} {
@@ -529,7 +554,7 @@ namespace eval tcc4tcl {
 			 }
 			 set code "#define USE_TK_STUBS 1\n#include <tk.h>\n$compiletkstubs\n$code"
 		}
-		set code "#define USE_TCL_STUBS\n#include <tcl.h>\n$code"
+		set code "#include <tcl.h>\n$code"
 
 		# Append additional generated code to support the output type
 		puts "Type is $state(type)";
@@ -580,7 +605,10 @@ namespace eval tcc4tcl {
 				if {$packageVersion == ""} {
 					set packageVersion "1.0"
 				}
-				append code "__declspec(dllexport) \n"
+				append code "#ifndef DLLEXPORT \n"
+				append code "#define DLLEXPORT $DLLEXPORT\n"
+				append code "#endif \n" 
+				append code "DLLEXPORT \n"
 				append code "int [string totitle $packageName]_Init(Tcl_Interp *interp) \{\n"
 				append code "#ifdef USE_TCL_STUBS\n"
 				append code "  if (Tcl_InitStubs(interp, $tclversion, 0) == 0L) \{\n"
@@ -619,9 +647,10 @@ namespace eval tcc4tcl {
 		switch -- $state(type) {
 			"package" {
 				set tcc_type "dll"
-				$handle add_library_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/lib/"
-				$handle add_library tclstub86elf
-				$handle add_library tkstub86elf
+				#$handle add_library_path  "[info nameofexecutable]/lib/tcc4tcl-0.30/lib/"
+				$handle add_library_path  "${dir}/lib/"
+				$handle add_library $tclstub
+				$handle add_library $tkstub
 			}
 			default {
 				set tcc_type $state(type)
@@ -641,6 +670,7 @@ namespace eval tcc4tcl {
 		foreach path $state(add_lib_path) {
 			tcc add_library_path $path
 		}
+		tcc add_library_path  "${dir}/lib/"
 
 		foreach lib $state(add_lib) {
 			tcc add_library $lib
@@ -652,13 +682,14 @@ namespace eval tcc4tcl {
 
 		switch -- $state(type) {
 			"memory" {
-				puts [tcc compile $code]
-				if {[info exists state(procs)] && [llength $state(procs)] > 0} {
-				    #puts  $state(procs);
-					foreach {procname cname_obj} $state(procs) {
-						tcc command $procname {*}$cname_obj
-					}
-				}
+                puts [tcc compile $code]
+				
+                if {[info exists state(procs)] && [llength $state(procs)] > 0} {
+                    puts  $state(procs);
+                    foreach {procname cname_obj} $state(procs) {
+                        tcc command $procname {*}$cname_obj
+                    }
+                }
 			}
 
 			"package" - "dll" - "exe" {
@@ -695,13 +726,14 @@ namespace eval tcc4tcl {
 					# this is necessary, since tcc tries to load lib alacarte, so no symbols will be resolved before smth is compolied
 					tcc add_library $lib
 				}
-                 set outfile [file tail $state(filename)]
+
+				set outfile [file tail $state(filename)]
 				if {![info exists packageName]} {set packageName "."}
             			if {$outfile==""} {
                 			set outfile $packageName
             			}
 
-				set outfile $outfile.dll
+				set outfile $outfile.$outfileext
 				if {[file isdir $packageName]} {
 					set outfile [file join $packageName/$outfile]
 				}
