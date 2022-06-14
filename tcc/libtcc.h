@@ -1,10 +1,9 @@
 #ifndef LIBTCC_H
 #define LIBTCC_H
-
+#undef LIBTCCAPI
 #ifndef LIBTCCAPI
-# define LIBTCCAPI
+# define LIBTCCAPI __attribute__((visibility("default")))
 #endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -812,7 +812,9 @@ static int tcc_compile(TCCState *s1)
        they are undefined) */
     free_defines(define_start); 
 
-    gen_inline_functions();
+    // MiR avoid win32 crash with extern inline and malformed code
+    if(s1->nb_errors==0)
+        gen_inline_functions();
 
     sym_pop(&global_stack, NULL);
     sym_pop(&local_stack, NULL);
@@ -1122,12 +1124,10 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
     ElfW(Ehdr) ehdr;
     int ret, size;
     Tcl_Channel ret_chan, fd;
-
     /* find source file type with extension */
     ext = tcc_fileextension(filename);
     if (ext[0])
         ext++;
-
 #ifdef CONFIG_TCC_ASM
     /* if .S file, define __ASSEMBLER__ like gcc does */
     if (!strcmp(ext, "S"))
@@ -1274,7 +1274,6 @@ static int tcc_add_library_internal(TCCState *s, const char *fmt,
 {
     char buf[1024];
     int i;
-
     for(i = 0; i < nb_paths; i++) {
         snprintf(buf, sizeof(buf), fmt, paths[i], filename);
         if (tcc_add_file_internal(s, buf, flags) == 0)
@@ -1302,6 +1301,7 @@ ST_FUNC int tcc_add_crt(TCCState *s, const char *filename)
 /* the library name is the same as the argument of the '-l' option */
 LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 {
+	
 #ifdef TCC_TARGET_PE
     const char *libs[] = { "%s/%s.def", "%s/lib%s.def", "%s/%s.dll", "%s/lib%s.dll", "%s/lib%s.a", NULL };
     const char **pp = s->static_link ? libs + 4 : libs;
@@ -1953,6 +1953,7 @@ LIBTCCAPI int tcc_set_options(TCCState *s, const char *str)
     int ret;
 
     argc = 0, argv = NULL;
+
     for(;;) {
         while (is_space(*str))
             str++;
