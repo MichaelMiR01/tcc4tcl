@@ -858,11 +858,10 @@ Section *FindSection(TCCState * s1, const char *sname)
     return 0;
 }
 
-ST_FUNC int tcc_load_coff(TCCState * s1, Tcl_Channel fd)
+ST_FUNC int tcc_load_coff(TCCState * s1, int fd)
 {
 // tktk TokenSym *ts;
 
-    int native_fd;
     FILE *f;
     unsigned int str_size;
     char *Coff_str_table, *name;
@@ -870,14 +869,8 @@ ST_FUNC int tcc_load_coff(TCCState * s1, Tcl_Channel fd)
     struct syment csym;
     char name2[9];
     FILHDR file_hdr;		/* FILE HEADER STRUCTURE              */
-    int tcl_ret;
 
-    tcl_ret = Tcl_GetChannelHandle(fd, TCL_READABLE, &native_fd);
-    if (tcl_ret != TCL_OK) {
-	tcc_error("Unable to open .out file for input");
-    }
-
-    f = fdopen(native_fd, "rb");
+    f = fdopen(fd, "rb");
     if (!f) {
 	tcc_error("Unable to open .out file for input");
     }

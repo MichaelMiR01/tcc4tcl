@@ -3,6 +3,9 @@
 namespace eval tcc4tcl {
 	variable dir 
 	variable count
+	variable cmdline
+
+	if {![info exists cmdline]} {set cmdline $::argv}
 
 	set dir [file dirname [info script]]
 
@@ -33,6 +36,7 @@ namespace eval tcc4tcl {
 	proc new {{output ""} {pkgName ""}} {
 		variable dir
 		variable count
+		variable cmdline
 
 		set handle ::tcc4tcl::tcc_[incr count]
 
@@ -47,6 +51,7 @@ namespace eval tcc4tcl {
 		}
 
 		array set $handle [list code "" type $type filename $output package $pkgName add_inc_path "" add_lib_path "" add_lib "" add_macros ""]
+		_process_command_line $handle $cmdline
 
 		proc $handle {cmd args} [string map [list @@HANDLE@@ $handle] {
 			set handle {@@HANDLE@@}
@@ -848,4 +853,4 @@ proc ::tcc4tcl::wrap {name adefs rtype {body "#"} {cname ""} {includePrototype 0
 
 namespace eval tcc4tcl {namespace export cproc}
 
-package provide tcc4tcl "0.30"
+package provide tcc4tcl "0.40"

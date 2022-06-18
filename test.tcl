@@ -1,6 +1,6 @@
 #! /usr/bin/env tclsh
 
-lappend auto_path [lindex $argv 0]
+lappend auto_path [file norm [lindex $argv 0]]
 package require tcc4tcl
 
 tcc4tcl::cproc test {int i} int { return(i+42); }
