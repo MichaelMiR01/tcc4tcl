@@ -5041,7 +5041,7 @@ $as_echo "don't know" >&6; }
 
 fi
 
-ac_config_files="$ac_config_files Makefile pkgIndex.tcl tcc4tcl.syms tcc/Makefile"
+ac_config_files="$ac_config_files Makefile pkgIndex.tcl tcc4tcl.syms"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5752,7 +5752,6 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "pkgIndex.tcl") CONFIG_FILES="$CONFIG_FILES pkgIndex.tcl" ;;
     "tcc4tcl.syms") CONFIG_FILES="$CONFIG_FILES tcc4tcl.syms" ;;
-    "tcc/Makefile") CONFIG_FILES="$CONFIG_FILES tcc/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

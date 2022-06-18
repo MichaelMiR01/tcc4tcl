@@ -108,4 +108,4 @@ if test "${TCC4TCL_TARGET}" = "shared"; then
 fi
 
 dnl Produce output
-AC_OUTPUT(Makefile pkgIndex.tcl tcc4tcl.syms tcc/Makefile)
+AC_OUTPUT(Makefile pkgIndex.tcl tcc4tcl.syms)
