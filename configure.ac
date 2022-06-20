@@ -18,6 +18,11 @@ DC_CHK_OS_INFO
 dnl Perform Tcl Extension required stuff
 TCLEXT_INIT
 
+if test "$TCL_SUPPORTS_STUBS" = "1"; then
+	TCL_LIBS="${TCL_LIBS} ${TCL_STUB_LIB_SPEC}"
+fi
+TCC_LDFLAGS="${TCL_LIB_SPEC} ${TCL_LIBS}"
+
 dnl Determine if a shared or static build is requested
 TCC4TCL_TARGET="${TCLEXT_BUILD}"
 

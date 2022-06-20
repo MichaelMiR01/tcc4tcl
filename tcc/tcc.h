@@ -24,6 +24,8 @@
 #define _GNU_SOURCE
 #include "config.h"
 
+#  include <tcl.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -555,6 +557,7 @@ typedef struct BufferedFile {
     uint8_t *buf_ptr;
     uint8_t *buf_end;
     int fd;
+	Tcl_Channel fdttt;
     struct BufferedFile *prev;
     int line_num;    /* current line number - here to simplify code */
     int line_ref;    /* tcc -E: last printed line */
@@ -1143,6 +1146,7 @@ ST_FUNC Sym *global_identifier_push(int v, int t, int c);
 
 ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen);
 ST_FUNC int tcc_open(TCCState *s1, const char *filename);
+ST_FUNC Tcl_Channel tcc_openttt(TCCState *s1, const char *filename);
 ST_FUNC void tcc_close(void);
 
 ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags);
@@ -1423,7 +1427,9 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s);
 
 ST_FUNC int tcc_object_type(int fd, ElfW(Ehdr) *h);
 ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset);
+ST_FUNC int tcc_load_object_filettt(TCCState *s1, Tcl_Channel fd, unsigned long file_offset);
 ST_FUNC int tcc_load_archive(TCCState *s1, int fd);
+ST_FUNC int tcc_load_archivettt(TCCState *s1, Tcl_Channel fd);
 ST_FUNC void tcc_add_bcheck(TCCState *s1);
 ST_FUNC void tcc_add_runtime(TCCState *s1);
 
@@ -1438,6 +1444,7 @@ ST_FUNC void *tcc_get_symbol_err(TCCState *s, const char *name);
 
 #ifndef TCC_TARGET_PE
 ST_FUNC int tcc_load_dll(TCCState *s1, int fd, const char *filename, int level);
+ST_FUNC int tcc_load_dllttt(TCCState *s1, Tcl_Channel fd, const char *filename, int level);
 ST_FUNC int tcc_load_ldscript(TCCState *s1);
 ST_FUNC uint8_t *parse_comment(uint8_t *p);
 ST_FUNC void minp(void);
@@ -1574,6 +1581,7 @@ ST_FUNC void gen_clear_cache(void);
 #ifdef TCC_TARGET_COFF
 ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f);
 ST_FUNC int tcc_load_coff(TCCState * s1, int fd);
+ST_FUNC int tcc_load_coffttt(TCCState * s1, Tcl_Channel fd);
 #endif
 
 /* ------------ tccasm.c ------------ */
@@ -1601,6 +1609,7 @@ ST_FUNC void asm_clobber(uint8_t *clobber_regs, const char *str);
 /* ------------ tccpe.c -------------- */
 #ifdef TCC_TARGET_PE
 ST_FUNC int pe_load_file(struct TCCState *s1, const char *filename, int fd);
+ST_FUNC int pe_load_filettt(struct TCCState *s1, const char *filename, Tcl_Channel fd);
 ST_FUNC int pe_output_file(TCCState * s1, const char *filename);
 ST_FUNC int pe_putimport(TCCState *s1, int dllindex, const char *name, addr_t value);
 #if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64

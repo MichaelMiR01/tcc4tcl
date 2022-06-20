@@ -667,6 +667,7 @@ EXEEXT
 ac_ct_CC
 CPPFLAGS
 LDFLAGS
+TCC_LDFLAGS
 CFLAGS
 CC
 target_alias
@@ -3852,7 +3853,10 @@ $as_echo "#define USE_TCL_STUBS 1" >>confdefs.h
 	fi
 
 
-
+if test "$TCL_SUPPORTS_STUBS" = "1"; then
+	TCL_LIBS="${TCL_LIBS} ${TCL_STUB_LIB_SPEC}"
+fi
+TCC_LDFLAGS="${TCL_LIB_SPEC} ${TCL_LIBS}"
 
 
 TCC4TCL_TARGET="${TCLEXT_BUILD}"

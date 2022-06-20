@@ -51,6 +51,8 @@ else
  endif
 endif
 
+LDFLAGS += $(TCC_LDFLAGS)
+
 # run local version of tcc with local libraries and includes
 TCCFLAGS-unx = -B$(TOP) -I$(TOPSRC)/include -I$(TOPSRC) -I$(TOP)
 TCCFLAGS-win = -B$(TOPSRC)/win32 -I$(TOPSRC)/include -I$(TOPSRC) -I$(TOP) -L$(TOP)

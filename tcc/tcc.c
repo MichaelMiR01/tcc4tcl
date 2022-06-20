@@ -252,6 +252,17 @@ int main(int argc0, char **argv0)
     int argc; char **argv;
     FILE *ppfp = stdout;
 
+#ifdef USE_TCL_STUBS
+#undef Tcl_CreateInterp
+#undef Tcl_InitStubs
+    Tcl_Interp *interp;
+
+    interp = Tcl_CreateInterp();
+    if (interp != NULL) {
+        Tcl_InitStubs(interp, TCL_VERSION, 0);
+    }
+#endif
+
 redo:
     argc = argc0, argv = argv0;
     s = tcc_new(NULL);
