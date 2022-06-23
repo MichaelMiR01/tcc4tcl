@@ -304,14 +304,8 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 
 #ifdef USE_TCL_STUBS
 	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
- 
 	if (index == TCC_OUTPUT_MEMORY) {
 		/* Only add this symbol if we are compiling to memory */
-		/*		
-		#ifdef TCC_TARGET_PE
-		tcc_define_symbol(s, "__TCC_INTERN__", "1");
-		#endif
-		*/
 		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
 		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
 		tcc_add_symbol(s, "Tcl_initStubs", &Tcl_InitStubs);
@@ -322,7 +316,7 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	/*printf("type: %d\n", index); */
 	Tcl_CreateObjCommand(interp,Tcl_GetString(objv[objc-1]),Tcc4tclHandleCmd,ts,Tcc4tclCCommandDeleteProc);
 
-	//Tcl_SetObjResult(interp, objv[objc-1]);
+	Tcl_SetObjResult(interp, objv[objc-1]);
 
 	return TCL_OK;
 }
