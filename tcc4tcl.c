@@ -19,9 +19,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <tcl.h>
+#define USE_TCL_STUBS
 #include <stdlib.h>
+#include <tcl.h>
+#include <tclInt.h>
+
 #include "tcc.h"
+
 
 struct TclTCCState {
 	TCCState *s;
@@ -60,7 +64,6 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 	Tcl_WideInt val;
 	Tcl_Obj *val_o;
 	void *val_p;
-	void *val_p2;
 	int index;
 	int res;
 	struct TclTCCState *ts;
@@ -68,15 +71,14 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 	Tcl_Obj *sym_addr;
 	static CONST char *options[] = {
 		"add_include_path", "add_file",  "add_library", 
-		"add_library_path", "add_symbol", "command", "nrcommand", "compile",
+		"add_library_path", "add_symbol", "command", "compile",
 		"define", "get_symbol", "output_file", "undefine",
 		(char *) NULL
 	};
 	enum options {
 		TCC4TCL_ADD_INCLUDE, TCC4TCL_ADD_FILE, TCC4TCL_ADD_LIBRARY, 
-		TCC4TCL_ADD_LIBRARY_PATH, TCC4TCL_ADD_SYMBOL, TCC4TCL_COMMAND,
-		TCC4TCL_NRCOMMAND, TCC4TCL_COMPILE, TCC4TCL_DEFINE, TCC4TCL_GET_SYMBOL,
-		TCC4TCL_OUTPUT_FILE, TCC4TCL_UNDEFINE
+		TCC4TCL_ADD_LIBRARY_PATH, TCC4TCL_ADD_SYMBOL, TCC4TCL_COMMAND, TCC4TCL_COMPILE,
+		TCC4TCL_DEFINE, TCC4TCL_GET_SYMBOL, TCC4TCL_OUTPUT_FILE, TCC4TCL_UNDEFINE
 	};
 	char *str;
 	int rv;
@@ -121,6 +123,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
                 tcc_add_library(s, Tcl_GetString(objv[2]));
                 return TCL_OK;
             }
+            
         case TCC4TCL_ADD_LIBRARY_PATH:
             if (objc != 3) {
                 Tcl_WrongNumArgs(interp, 2, objv, "path");
@@ -180,44 +183,6 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 
             /*printf("symbol: %x\n",val); */
             Tcl_CreateObjCommand(interp, Tcl_GetString(objv[2]), val_p, val_o, Tcc4tclDeleteClientData);
-            return TCL_OK;
-        case TCC4TCL_NRCOMMAND:
-	    if (objc != 5 && objc != 6) {
-		Tcl_WrongNumArgs(interp, 3, objv, "tclname cname nrcname ?clientData?");
-		return TCL_ERROR;
-	    }
-
-	    if (!ts->relocated) {
-		if(tcc_relocate(s, TCC_RELOCATE_AUTO)!=0) {
-		    Tcl_AppendResult(interp, "relocating failed", NULL);
-		    return TCL_ERROR;
-		} else {
-		    ts->relocated=1;
-		}
-	    }
-
-	    val_p = tcc_get_symbol(s, Tcl_GetString(objv[3]));
-	    if (val_p == NULL) {
-		Tcl_AppendResult(interp, "symbol '", Tcl_GetString(objv[3]),"' not found", NULL);
-		return TCL_ERROR;
-	    }
-
-	    val_p2 = tcc_get_symbol(s, Tcl_GetString(objv[4]));
-	    if (val_p2 == NULL) {
-		Tcl_AppendResult(interp, "symbol '", Tcl_GetString(objv[4]),"' not found", NULL);
-		return TCL_ERROR;
-	    }
-
-	    /* the ClientData */
-	    if (objc == 6) {
-		val_o = objv[5];
-		Tcl_IncrRefCount(val_o);
-	    } else {
-		val_o = NULL;
-	    }
-
-	    /*printf("symbol: %x\n",val); */
-	    Tcl_NRCreateCommand(interp, Tcl_GetString(objv[2]), val_p, val_p2, val_o, Tcc4tclDeleteClientData);
             return TCL_OK;
         case TCC4TCL_COMPILE:
             if(ts->relocated == 1) {
@@ -295,6 +260,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
             }
             tcc_undefine_symbol(s,Tcl_GetString(objv[2]));
             return TCL_OK;
+        
         default:
             Tcl_Panic("internal error during option lookup");
     }
@@ -306,7 +272,11 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	TCCState *s;
     	int index;
 	static CONST char *types[] = {
+	    #ifndef TCC_NEW
 		"memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
+		#else
+		"","memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
+		#endif
 	};
 
 	if (objc < 3 || objc > 4) {
@@ -327,27 +297,34 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 		return(TCL_ERROR);
 	}
 
-#ifdef USE_TCL_STUBS
-	if (index == TCC_OUTPUT_MEMORY) {
-		/* Only add these symbols if we are compiling to memory */
-		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
-		tcc_add_symbol(s, "Tcl_InitStubs", &Tcl_InitStubs);
-	}
+	ts = (void *) ckalloc(sizeof(*ts));
+	ts->s = s;
+    ts->relocated = 0;
 
-	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
-#endif
 
 	tcc_set_error_func(s, interp, (void *)&Tcc4tclErrorFunc);
 
-	ts = (void *) ckalloc(sizeof(*ts));
-	ts->s = s;
-    	ts->relocated = 0;
+#ifdef USE_TCL_STUBS
+	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
+ 
+	if (index == TCC_OUTPUT_MEMORY) {
+		/* Only add this symbol if we are compiling to memory */
+		/*		
+		#ifdef TCC_TARGET_PE
+		tcc_define_symbol(s, "__TCC_INTERN__", "1");
+		#endif
+		*/
+		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
+		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
+		tcc_add_symbol(s, "Tcl_initStubs", &Tcl_InitStubs);
+	}
+#endif
+	tcc_set_output_type(s,index);
 
 	/*printf("type: %d\n", index); */
-	tcc_set_output_type(s,index);
 	Tcl_CreateObjCommand(interp,Tcl_GetString(objv[objc-1]),Tcc4tclHandleCmd,ts,Tcc4tclCCommandDeleteProc);
 
-	Tcl_SetObjResult(interp, objv[objc-1]);
+	//Tcl_SetObjResult(interp, objv[objc-1]);
 
 	return TCL_OK;
 }
