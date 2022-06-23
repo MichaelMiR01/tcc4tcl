@@ -272,11 +272,9 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	TCCState *s;
     	int index;
 	static CONST char *types[] = {
-	    #ifndef TCC_NEW
-		"memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
-		#else
+		//"memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
+		// 0.9.26 to 0.9.27 the enum changed
 		"","memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
-		#endif
 	};
 
 	if (objc < 3 || objc > 4) {
