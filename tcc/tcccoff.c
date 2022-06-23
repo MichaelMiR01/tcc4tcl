@@ -869,8 +869,17 @@ ST_FUNC int tcc_load_coff(TCCState * s1, int fd)
     struct syment csym;
     char name2[9];
     FILHDR file_hdr;		/* FILE HEADER STRUCTURE              */
+    
+    Tcl_Channel fd_tcl = file->fd_tcl;
+	int tcl_ret;
+	int fd_native;
 
-    f = fdopen(fd, "rb");
+    tcl_ret = Tcl_GetChannelHandle(fd, TCL_READABLE, &fd_native);
+    if (tcl_ret != TCL_OK) {
+	tcc_error("Unable to open .out file for input");
+    }
+    
+    f = fdopen(fd_native, "rb");
     if (!f) {
 	tcc_error("Unable to open .out file for input");
     }

@@ -54,6 +54,7 @@
  || defined(__FreeBSD_kernel__) \
  || defined(__DragonFly__) \
  || defined(__OpenBSD__) \
+ || (defined(__sun) && defined(__SVR4)) \
  || defined(__NetBSD__) \
  || defined(__dietlibc__) \
  || defined(_WIN32)

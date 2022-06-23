@@ -2245,10 +2245,15 @@ LIBTCCAPI int tcc_output_file(TCCState *s, const char *filename)
 static void *load_data(int fd, unsigned long file_offset, unsigned long size)
 {
     void *data;
+	
+	Tcl_Channel fd_tcl;
+	fd_tcl = file->fd_tcl;
 
     data = tcc_malloc(size);
     lseek(fd, file_offset, SEEK_SET);
+	Tcl_Seek(fd_tcl, file_offset, SEEK_SET);
     read(fd, data, size);
+	Tcl_Read(fd_tcl, data, size);
     return data;
 }
 
@@ -2261,7 +2266,12 @@ typedef struct SectionMergeInfo {
 
 ST_FUNC int tcc_object_type(int fd, ElfW(Ehdr) *h)
 {
-    int size = read(fd, h, sizeof *h);
+	int size;
+	Tcl_Channel fd_tcl;
+	fd_tcl = file->fd_tcl;
+	
+    /*size = read(fd, h, sizeof *h);*/
+	size = Tcl_Read(fd_tcl, (char *) h, sizeof *h);
     if (size == sizeof *h && 0 == memcmp(h, ELFMAG, 4)) {
         if (h->e_type == ET_REL)
             return AFF_BINTYPE_REL;
@@ -2296,10 +2306,14 @@ ST_FUNC int tcc_load_object_file(TCCState *s1,
 
     int stab_index;
     int stabstr_index;
+	
+	Tcl_Channel fd_tcl;
+	fd_tcl = file->fd_tcl;
 
     stab_index = stabstr_index = 0;
-
-    lseek(fd, file_offset, SEEK_SET);
+	
+    /*lseek(fd, file_offset, SEEK_SET);*/
+	Tcl_Seek(fd_tcl, file_offset, SEEK_SET);
     if (tcc_object_type(fd, &ehdr) != AFF_BINTYPE_REL)
         goto fail1;
     /* test CPU specific stuff */
@@ -2431,6 +2445,9 @@ ST_FUNC int tcc_load_object_file(TCCState *s1,
             lseek(fd, file_offset + sh->sh_offset, SEEK_SET);
             ptr = section_ptr_add(s, size);
             read(fd, ptr, size);
+			Tcl_Seek(fd_tcl, file_offset + sh->sh_offset, SEEK_SET);
+            ptr = section_ptr_add(s, size);
+            Tcl_Read(fd_tcl, ptr, size);
         } else {
             s->data_offset += size;
         }
@@ -2597,9 +2614,13 @@ static int tcc_load_alacarte(TCCState *s1, int fd, int size, int entrysize)
     const char *ar_names, *p;
     const uint8_t *ar_index;
     ElfW(Sym) *sym;
+	
+	Tcl_Channel fd_tcl = file->fd_tcl;
 
     data = tcc_malloc(size);
     if (read(fd, data, size) != size)
+        goto fail;
+	if (Tcl_Read(fd_tcl, data, size) != size)
         goto fail;
     nsyms = entrysize == 4 ? get_be32(data) : get_be64(data);
     ar_index = data + entrysize;
@@ -2641,12 +2662,17 @@ ST_FUNC int tcc_load_archive(TCCState *s1, int fd)
     char magic[8];
     int size, len, i;
     unsigned long file_offset;
+	
+	Tcl_Channel fd_tcl;
+	fd_tcl = file->fd_tcl;
 
     /* skip magic which was already checked */
     read(fd, magic, sizeof(magic));
+	Tcl_Read(fd_tcl, magic, sizeof(magic));
 
     for(;;) {
         len = read(fd, &hdr, sizeof(hdr));
+		len = Tcl_Read(fd_tcl, (char *) &hdr, sizeof(hdr));
         if (len == 0)
             break;
         if (len != sizeof(hdr)) {
@@ -2663,6 +2689,7 @@ ST_FUNC int tcc_load_archive(TCCState *s1, int fd)
         }
         ar_name[i + 1] = '\0';
         file_offset = lseek(fd, 0, SEEK_CUR);
+		file_offset = Tcl_Seek(fd_tcl, 0, SEEK_CUR);
         /* align to even */
         size = (size + 1) & ~1;
         if (!strcmp(ar_name, "/")) {
@@ -2680,6 +2707,7 @@ ST_FUNC int tcc_load_archive(TCCState *s1, int fd)
             }
         }
         lseek(fd, file_offset + size, SEEK_SET);
+		Tcl_Seek(fd_tcl, file_offset + size, SEEK_SET);
     }
     return 0;
 }
@@ -2698,8 +2726,11 @@ ST_FUNC int tcc_load_dll(TCCState *s1, int fd, const char *filename, int level)
     unsigned char *dynstr;
     const char *name, *soname;
     DLLReference *dllref;
+	
+	Tcl_Channel fd_tcl = file->fd_tcl;
 
     read(fd, &ehdr, sizeof(ehdr));
+	Tcl_Read(fd_tcl, (char *) &ehdr, sizeof(ehdr));
 
     /* test CPU specific stuff */
     if (ehdr.e_ident[5] != ELFDATA2LSB ||

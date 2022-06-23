@@ -1665,17 +1665,30 @@ static char *trimback(char *a, char *e)
     return a;
 }
 
+static char *get_line(char *line, int size, int fd)
+{
+	Tcl_Channel fd_tcl = file->fd_tcl;
+	
+    int n;
+    for (n = 0; n < size - 1; )
+        if (Tcl_Read(fd_tcl, line + n, 1) < 1 || line[n++] == '\n')
+            break;
+    if (0 == n)
+        return NULL;
+    trimback(line, line + n);
+    return trimfront(line);
+}
+
 /* ------------------------------------------------------------- */
 static int pe_load_def(TCCState *s1, int fd)
 {
     int state = 0, ret = -1, dllindex = 0, ord;
     char line[400], dllname[80], *p, *x;
-    FILE *fp;
 
-    fp = fdopen(dup(fd), "rb");
-    while (fgets(line, sizeof line, fp))
-    {
-        p = trimfront(trimback(line, strchr(line, 0)));
+    for (;;) {
+		p = get_line(line, sizeof line, fd);
+        if (NULL == p)
+            break;
         if (0 == *p || ';' == *p)
             continue;
 
@@ -1716,7 +1729,6 @@ static int pe_load_def(TCCState *s1, int fd)
     }
     ret = 0;
 quit:
-    fclose(fp);
     return ret;
 }
 

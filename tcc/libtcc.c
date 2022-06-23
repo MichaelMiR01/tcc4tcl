@@ -592,6 +592,7 @@ ST_FUNC void tcc_close(void)
     BufferedFile *bf = file;
     if (bf->fd > 0) {
         close(bf->fd);
+		Tcl_Close(NULL,bf->fd_tcl);
         total_lines += bf->line_num;
     }
     if (bf->true_filename != bf->filename)
@@ -602,21 +603,39 @@ ST_FUNC void tcc_close(void)
 
 ST_FUNC int tcc_open(TCCState *s1, const char *filename)
 {
-    int fd;
-    if (strcmp(filename, "-") == 0)
+    Tcl_Channel fd_tcl;
+    Tcl_Obj *path;
+    
+    int fd = 3;
+    if (strcmp(filename, "-") == 0) {
         fd = 0, filename = "<stdin>";
-    else
+        fd_tcl = Tcl_GetStdChannel(TCL_STDIN);
+    } else {
         fd = open(filename, O_RDONLY | O_BINARY);
+        path = Tcl_NewStringObj(filename,-1);
+        Tcl_IncrRefCount(path);
+        fd_tcl = Tcl_FSOpenFileChannel(NULL,path, "RDONLY BINARY", 0);
+        Tcl_DecrRefCount(path);
+    }
+
     if ((s1->verbose == 2 && fd >= 0) || s1->verbose == 3)
         printf("%s %*s%s\n", fd < 0 ? "nf":"->",
                (int)(s1->include_stack_ptr - s1->include_stack), "", filename);
+
     if (fd < 0)
         return -1;
+
+    if (fd_tcl == NULL) {
+        return -1;
+    }
+    
     tcc_open_bf(s1, filename, 0);
 #ifdef _WIN32
     normalize_slashes(file->filename);
 #endif
     file->fd = fd;
+    file->fd_tcl = fd_tcl;
+
     return fd;
 }
 
@@ -737,6 +756,7 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     s->nocommon = 1;
     s->warn_implicit_function_declaration = 1;
     s->ms_extensions = 1;
+	s->static_link = 0;
 
 #ifdef CHAR_IS_UNSIGNED
     s->char_is_unsigned = 1;
@@ -841,6 +861,12 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
 # if defined(__OpenBSD__)
     tcc_define_symbol(s, "__OpenBSD__", "__OpenBSD__");
 # endif
+#endif
+	
+#if defined(__ANDROID__)
+#  define str(s) #s
+    tcc_define_symbol(s, "__ANDROID__", str(__ANDROID__));
+#  undef str
 #endif
 
     /* TinyCC & gcc defines */
@@ -1019,10 +1045,13 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
     if (flags & AFF_TYPE_BIN) {
         ElfW(Ehdr) ehdr;
         int fd, obj_type;
-
+		Tcl_Channel fd_tcl;
+		
+		fd_tcl = file->fd_tcl;
         fd = file->fd;
         obj_type = tcc_object_type(fd, &ehdr);
         lseek(fd, 0, SEEK_SET);
+		Tcl_Seek(fd_tcl, 0, SEEK_SET);
 
 #ifdef TCC_TARGET_MACHO
         if (0 == obj_type && 0 == strcmp(tcc_fileextension(filename), ".dylib"))
