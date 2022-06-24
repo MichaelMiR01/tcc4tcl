@@ -306,6 +306,8 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
 	if (index == TCC_OUTPUT_MEMORY) {
 		/* Only add this symbol if we are compiling to memory */
+		tcc_define_symbol(s, "tclStubsPtr", "(*_imp__tclStubsPtr)");
+		tcc_define_symbol(s, "tclIntStubsPtr", "(*_imp__tclIntStubsPtr)");
 		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
 		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
 		tcc_add_symbol(s, "Tcl_initStubs", &Tcl_InitStubs);

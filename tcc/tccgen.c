@@ -7224,16 +7224,6 @@ static int decl0(int l, int is_for_loop_init, Sym *func_sym)
             }
 
 #ifdef TCC_TARGET_PE
-            // patch for missing dllimport
-            if(!ad.a.dllimport&&!ad.a.dllexport) {
-                int sym_index =0;
-                sym_index = find_elf_sym(tcc_state->dynsymtab_section, get_tok_str(v, NULL));
-                if(sym_index>0) {
-                    //tcc_warning("found predefined symbol %s",get_tok_str(v, NULL));
-                    ad.a.dllimport=1;
-                }
-            }
-
             if (ad.a.dllimport || ad.a.dllexport) {
                 if (type.t & (VT_STATIC|VT_TYPEDEF))
                     tcc_error("cannot have dll linkage with static or typedef");
