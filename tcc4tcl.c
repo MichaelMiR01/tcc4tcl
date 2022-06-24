@@ -306,8 +306,11 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
 	if (index == TCC_OUTPUT_MEMORY) {
 		/* Only add this symbol if we are compiling to memory */
-		tcc_define_symbol(s, "tclStubsPtr", "(*_imp__tclStubsPtr)");
-		tcc_define_symbol(s, "tclIntStubsPtr", "(*_imp__tclIntStubsPtr)");
+		#ifdef TCC_TARGET_PE
+		    // define stubsptr as dllimport symbols to satisfy tcc's needs
+            tcc_define_symbol(s, "tclStubsPtr", "(*_imp__tclStubsPtr)");
+            tcc_define_symbol(s, "tclIntStubsPtr", "(*_imp__tclIntStubsPtr)");
+        #endif
 		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
 		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
 		tcc_add_symbol(s, "Tcl_initStubs", &Tcl_InitStubs);
@@ -331,6 +334,6 @@ int Tcc4tcl_Init(Tcl_Interp *interp) {
 #endif
 
 	Tcl_CreateObjCommand(interp, "tcc4tcl", Tcc4tclCreateCmd, NULL, NULL);
-
+    Tcl_SetVar(interp,  "::TCC_VERSION", TCC_VERSION, 0);
 	return TCL_OK;
 }
