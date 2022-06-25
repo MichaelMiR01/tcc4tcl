@@ -492,9 +492,10 @@ namespace eval tcc4tcl {
         switch -glob -- $::tcl_platform(os)-$::tcl_platform(pointerSize) {
             "Linux-*" {
                 puts "Linux"
+                $handle add_include_path  "${dir}/include/"
+                $handle add_include_path  "${dir}/linux"
                 $handle add_include_path  "/usr/include/"
                 $handle add_include_path  "/usr/include/x86_64-linux-gnu"
-                $handle add_include_path  "${dir}/include/"
                 $handle add_include_path  "${dir}/include/generic"
                 $handle add_include_path  "${dir}/include/xlib"
                 $handle add_include_path  "${dir}/include/generic/unix"
@@ -506,9 +507,10 @@ namespace eval tcc4tcl {
             "Windows*" {
                 puts "Windows"
                 $handle add_include_path  "${dir}/include/"
+                $handle add_include_path  "${dir}/win32"
                 $handle add_include_path  "${dir}/include/generic"
                 $handle add_include_path  "${dir}/include/xlib"
-                $handle add_include_path  "${dir}/include/winapi"
+                $handle add_include_path  "${dir}/win32/winapi"
                 $handle add_include_path  "${dir}/include/generic/win"
                 set outfileext dll
                 set tclstub tclstub86elf
