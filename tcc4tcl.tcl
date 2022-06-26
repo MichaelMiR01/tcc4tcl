@@ -493,7 +493,6 @@ namespace eval tcc4tcl {
             "Linux-*" {
                 puts "Linux"
                 $handle add_include_path  "${dir}/include/"
-                $handle add_include_path  "${dir}/linux"
                 $handle add_include_path  "/usr/include/"
                 $handle add_include_path  "/usr/include/x86_64-linux-gnu"
                 $handle add_include_path  "${dir}/include/generic"
