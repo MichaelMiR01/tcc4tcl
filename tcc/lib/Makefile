@@ -61,7 +61,6 @@ $(BIN) : $(patsubst %.o,$(X)%.o,$(OBJ-$T))
 	$(XAR) rcs $@ $^
 
 $(X)%.o : %.c
-	set > /tmp/2set.txt
 	$(XCC) -c $< -o $@ $(XFLAGS)
 
 $(X)%.o : %.S

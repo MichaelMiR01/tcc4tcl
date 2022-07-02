@@ -259,7 +259,6 @@ ST_FUNC int tccgen_compile(TCCState *s1)
     func_old_type.ref = sym_push(SYM_FIELD, &int_type, 0, 0);
     func_old_type.ref->f.func_call = FUNC_CDECL;
     func_old_type.ref->f.func_type = FUNC_OLD;
-
     tcc_debug_start(s1);
 
 #ifdef TCC_TARGET_ARM

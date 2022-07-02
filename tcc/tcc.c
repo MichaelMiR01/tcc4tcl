@@ -17,6 +17,8 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#define USE_TCL_STUBS 1
+#include <tcl.h>
 
 #include "tcc.h"
 #if ONE_SOURCE
@@ -251,17 +253,6 @@ int main(int argc0, char **argv0)
     const char *first_file;
     int argc; char **argv;
     FILE *ppfp = stdout;
-
-#ifdef USE_TCL_STUBS
-#undef Tcl_CreateInterp
-#undef Tcl_InitStubs
-    Tcl_Interp *interp;
-
-    interp = Tcl_CreateInterp();
-    if (interp != NULL) {
-        Tcl_InitStubs(interp, TCL_VERSION, 0);
-    }
-#endif
 
 redo:
     argc = argc0, argv = argv0;

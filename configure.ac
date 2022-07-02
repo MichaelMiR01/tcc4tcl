@@ -1,5 +1,5 @@
 dnl Define ourselves
-AC_INIT(tcc4tcl, 0.40)
+AC_INIT(tcc4tcl, @@VERS@@)
 
 dnl Default prefix should be "UNSPECIFIED" to use magic in the Makefile
 ac_default_prefix="UNSPECIFIED"
@@ -17,11 +17,6 @@ DC_CHK_OS_INFO
 
 dnl Perform Tcl Extension required stuff
 TCLEXT_INIT
-
-if test "$TCL_SUPPORTS_STUBS" = "1"; then
-	TCL_LIBS="${TCL_LIBS} ${TCL_STUB_LIB_SPEC}"
-fi
-TCC_LDFLAGS="${TCL_LIB_SPEC} ${TCL_LIBS}"
 
 dnl Determine if a shared or static build is requested
 TCC4TCL_TARGET="${TCLEXT_BUILD}"
@@ -93,6 +88,25 @@ else
 fi
 AC_SUBST(TCC_WNO_UNUSED_RESULT)
 
+dnl Determine if the compiler supports -gz=none
+AC_CACHE_CHECK([if compiler supports -gz=none], [tcc4tcl_cv_compiler_gz_none], [
+	SAVE_CFLAGS="${CFLAGS}"
+	CFLAGS="${SAVE_CFLAGS} -gz=none"
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE()], [
+		tcc4tcl_cv_compiler_gz_none='yes'
+	], [
+		tcc4tcl_cv_compiler_gz_none='no'
+	])
+	CFLAGS="${SAVE_CFLAGS}"
+])
+
+if test "$tcc4tcl_cv_compiler_gz_none" = 'yes'; then
+	TCC_GZ_NONE='-gz=none'
+else
+	TCC_GZ_NONE=''
+fi
+AC_SUBST(TCC_GZ_NONE)
+
 dnl Determine HOST_PATH_SEPERATOR
 case $host_os in
 	*mingw*)
@@ -113,4 +127,4 @@ if test "${TCC4TCL_TARGET}" = "shared"; then
 fi
 
 dnl Produce output
-AC_OUTPUT(Makefile pkgIndex.tcl tcc4tcl.syms)
+AC_OUTPUT(Makefile pkgIndex.tcl tcc4tcl.syms tcc/Makefile)

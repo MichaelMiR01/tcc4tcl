@@ -572,16 +572,19 @@ ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
 {
     BufferedFile *bf;
     int buflen = initlen ? initlen : IO_BUF_SIZE;
-
     bf = tcc_mallocz(sizeof(BufferedFile) + buflen);
     bf->buf_ptr = bf->buffer;
     bf->buf_end = bf->buffer + initlen;
     bf->buf_end[0] = CH_EOB; /* put eob symbol */
     pstrcpy(bf->filename, sizeof(bf->filename), filename);
+#ifdef _WIN32
+    normalize_slashes(bf->filename);
+#endif
     bf->true_filename = bf->filename;
     bf->line_num = 1;
+    bf->ifndef_macro = 0;
     bf->ifdef_stack_ptr = s1->ifdef_stack_ptr;
-    bf->fd = -1;
+    bf->fd = NULL;
     bf->prev = file;
     file = bf;
     tok_flags = TOK_FLAG_BOL | TOK_FLAG_BOF;
@@ -590,9 +593,8 @@ ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
 ST_FUNC void tcc_close(void)
 {
     BufferedFile *bf = file;
-    if (bf->fd > 0) {
-        close(bf->fd);
-		Tcl_Close(NULL,bf->fd_tcl);
+    if (bf->fd != NULL) {
+        Tcl_Close(NULL,bf->fd);
         total_lines += bf->line_num;
     }
     if (bf->true_filename != bf->filename)
@@ -601,41 +603,31 @@ ST_FUNC void tcc_close(void)
     tcc_free(bf);
 }
 
-ST_FUNC int tcc_open(TCCState *s1, const char *filename)
+ST_FUNC Tcl_Channel tcc_open(TCCState *s1, const char *filename)
 {
-    Tcl_Channel fd_tcl;
+    Tcl_Channel fd;
     Tcl_Obj *path;
-    
-    int fd = 3;
+
     if (strcmp(filename, "-") == 0) {
-        fd = 0, filename = "<stdin>";
-        fd_tcl = Tcl_GetStdChannel(TCL_STDIN);
+        fd = Tcl_GetStdChannel(TCL_STDIN);
+        filename = "stdin";
     } else {
-        fd = open(filename, O_RDONLY | O_BINARY);
         path = Tcl_NewStringObj(filename,-1);
         Tcl_IncrRefCount(path);
-        fd_tcl = Tcl_FSOpenFileChannel(NULL,path, "RDONLY BINARY", 0);
+        fd = Tcl_FSOpenFileChannel(NULL,path, "RDONLY BINARY", 0);
         Tcl_DecrRefCount(path);
     }
 
-    if ((s1->verbose == 2 && fd >= 0) || s1->verbose == 3)
-        printf("%s %*s%s\n", fd < 0 ? "nf":"->",
+    if ((s1->verbose == 2 && fd !=NULL) || s1->verbose == 3)
+        printf("%s %*s%s\n", fd !=NULL ? "nf":"->",
                (int)(s1->include_stack_ptr - s1->include_stack), "", filename);
-
-    if (fd < 0)
-        return -1;
-
-    if (fd_tcl == NULL) {
-        return -1;
-    }
-    
+    if (fd == NULL)
+        return NULL;
     tcc_open_bf(s1, filename, 0);
 #ifdef _WIN32
     normalize_slashes(file->filename);
 #endif
     file->fd = fd;
-    file->fd_tcl = fd_tcl;
-
     return fd;
 }
 
@@ -743,9 +735,10 @@ static void tcc_cleanup(void)
 LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
 {
     TCCState *s;
+    char buffer[100];
+    int a,b,c;
 
     tcc_cleanup();
-
     s = tcc_mallocz(sizeof(TCCState));
     if (!s)
         return NULL;
@@ -756,7 +749,6 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     s->nocommon = 1;
     s->warn_implicit_function_declaration = 1;
     s->ms_extensions = 1;
-	s->static_link = 0;
 
 #ifdef CHAR_IS_UNSIGNED
     s->char_is_unsigned = 1;
@@ -768,7 +760,6 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
 #if 0 /* def TCC_TARGET_PE */
     s->leading_underscore = 1;
 #endif
-
     if (init_lib_path == NULL) {
 #ifdef _WIN32
         tcc_set_lib_path_w32(s);
@@ -779,9 +770,15 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
         tcc_set_lib_path(s, init_lib_path);
     }
 
+    s->output_type = TCC_OUTPUT_MEMORY;
+
     tccelf_new(s);
     tccpp_new(s);
-
+    
+    //s->include_stack_ptr = s->include_stack;
+    s->static_link = 0;
+    //s->rdynamic = 1;
+    
     /* we add dummy defines for some special macros to speed up tests
        and to have working defined() */
     define_push(TOK___LINE__, MACRO_OBJ, NULL, NULL);
@@ -789,14 +786,13 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     define_push(TOK___DATE__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___TIME__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___COUNTER__, MACRO_OBJ, NULL, NULL);
-    {
+    if (1) {
         /* define __TINYC__ 92X  */
-        char buffer[32]; int a,b,c;
+        //char buffer[32]; int a,b,c;
         sscanf(TCC_VERSION, "%d.%d.%d", &a, &b, &c);
         sprintf(buffer, "%d", a*10000 + b*100 + c);
         tcc_define_symbol(s, "__TINYC__", buffer);
     }
-
     /* standard defines */
     tcc_define_symbol(s, "__STDC__", NULL);
     tcc_define_symbol(s, "__STDC_VERSION__", "199901L");
@@ -862,18 +858,13 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     tcc_define_symbol(s, "__OpenBSD__", "__OpenBSD__");
 # endif
 #endif
-	
-#if defined(__ANDROID__)
-#  define str(s) #s
-    tcc_define_symbol(s, "__ANDROID__", str(__ANDROID__));
-#  undef str
-#endif
 
     /* TinyCC & gcc defines */
+#ifndef TCC_USE_PTR_SIZE
 #if PTR_SIZE == 4
     /* 32bit systems. */
-    tcc_define_symbol(s, "__SIZE_TYPE__", "unsigned int");
-    tcc_define_symbol(s, "__PTRDIFF_TYPE__", "int");
+    tcc_define_symbol(s, "__SIZE_TYPE__", "unsigned long");
+    tcc_define_symbol(s, "__PTRDIFF_TYPE__", "long int");
     tcc_define_symbol(s, "__ILP32__", NULL);
 #elif LONG_SIZE == 4
     /* 64bit Windows. */
@@ -882,9 +873,10 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     tcc_define_symbol(s, "__LLP64__", NULL);
 #else
     /* Other 64bit systems. */
-    tcc_define_symbol(s, "__SIZE_TYPE__", "unsigned long");
-    tcc_define_symbol(s, "__PTRDIFF_TYPE__", "long");
+    tcc_define_symbol(s, "__SIZE_TYPE__", "unsigned long int");
+    tcc_define_symbol(s, "__PTRDIFF_TYPE__", "long int");
     tcc_define_symbol(s, "__LP64__", NULL);
+#endif
 #endif
 
 #ifdef TCC_TARGET_PE
@@ -921,6 +913,7 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
     /* Some GCC builtins that are simple to express as macros.  */
     tcc_define_symbol(s, "__builtin_extract_return_addr(x)", "x");
 #endif /* ndef TCC_TARGET_PE */
+
     return s;
 }
 
@@ -1029,13 +1022,15 @@ LIBTCCAPI int tcc_add_sysinclude_path(TCCState *s, const char *pathname)
 ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 {
     int ret;
+    Tcl_Channel ret_chan, fd;
 
     /* open the file */
-    ret = tcc_open(s1, filename);
-    if (ret < 0) {
+    ret = 0;
+    ret_chan = tcc_open(s1, filename);
+    if (ret_chan == NULL) {
         if (flags & AFF_PRINT_ERROR)
             tcc_error_noabort("file '%s' not found", filename);
-        return ret;
+        return -1;
     }
 
     /* update target deps */
@@ -1044,14 +1039,11 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 
     if (flags & AFF_TYPE_BIN) {
         ElfW(Ehdr) ehdr;
-        int fd, obj_type;
-		Tcl_Channel fd_tcl;
-		
-		fd_tcl = file->fd_tcl;
+        int obj_type;
+
         fd = file->fd;
         obj_type = tcc_object_type(fd, &ehdr);
-        lseek(fd, 0, SEEK_SET);
-		Tcl_Seek(fd_tcl, 0, SEEK_SET);
+        Tcl_Seek(fd, 0, SEEK_SET);
 
 #ifdef TCC_TARGET_MACHO
         if (0 == obj_type && 0 == strcmp(tcc_fileextension(filename), ".dylib"))
@@ -1068,7 +1060,7 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
                 ret = 0;
 #ifdef TCC_IS_NATIVE
                 if (NULL == dlopen(filename, RTLD_GLOBAL | RTLD_LAZY))
-                    ret = -1;
+                    ret = NULL;
 #endif
             } else {
                 ret = tcc_load_dll(s1, fd, filename,
@@ -1176,6 +1168,7 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
     const char *libs[] = { "%s/lib%s.so", "%s/lib%s.a", NULL };
     const char **pp = s->static_link ? libs + 1 : libs;
 #endif
+
     while (*pp) {
         if (0 == tcc_add_library_internal(s, *pp,
             libraryname, 0, s->library_paths, s->nb_library_paths))
@@ -1206,6 +1199,7 @@ LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val)
 #ifdef TCC_TARGET_PE
     /* On x86_64 'val' might not be reachable with a 32bit offset.
        So it is handled here as if it were in a DLL. */
+      
     pe_putimport(s, 0, name, (uintptr_t)val);
 #else
     set_elf_sym(symtab_section, (uintptr_t)val, 0,
@@ -1671,19 +1665,31 @@ static int args_parser_make_argv(const char *r, int *argc, char ***argv)
 static void args_parser_listfile(TCCState *s,
     const char *filename, int optind, int *pargc, char ***pargv)
 {
-    int fd, i;
+    int i;
     size_t len;
     char *p;
     int argc = 0;
     char **argv = NULL;
+    
+    Tcl_Channel fd;
+    Tcl_Obj *path;
 
-    fd = open(filename, O_RDONLY | O_BINARY);
-    if (fd < 0)
+    if (strcmp(filename, "-") == 0) {
+        fd = Tcl_GetStdChannel(TCL_STDIN);
+        filename = "stdin";
+    } else {
+        path = Tcl_NewStringObj(filename,-1);
+        Tcl_IncrRefCount(path);
+        fd = Tcl_FSOpenFileChannel(NULL,path, "RDONLY BINARY", 0);
+        Tcl_DecrRefCount(path);
+    }
+
+    if (fd == NULL)
         tcc_error("listfile '%s' not found", filename);
 
-    len = lseek(fd, 0, SEEK_END);
+    len = Tcl_Seek(fd, 0, SEEK_END);
     p = tcc_malloc(len + 1), p[len] = 0;
-    lseek(fd, 0, SEEK_SET), read(fd, p, len), close(fd);
+    Tcl_Seek(fd, 0, SEEK_SET), Tcl_Read(fd, p, len), Tcl_Close(NULL,fd);
 
     for (i = 0; i < *pargc; ++i)
         if (i == optind)

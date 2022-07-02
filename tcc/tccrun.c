@@ -31,9 +31,7 @@
 # ifndef _WIN32
 #  include <signal.h>
 #  ifndef __OpenBSD__
-#   ifndef __ANDROID__
-#    include <sys/ucontext.h>
-#   endif /* __ANDROID__ */
+#   include <sys/ucontext.h>
 #  endif
 # else
 #  define ucontext_t CONTEXT
@@ -41,10 +39,8 @@
 ST_DATA int rt_num_callers = 6;
 ST_DATA const char **rt_bound_error_msg;
 ST_DATA void *rt_prog_main;
-#ifdef CONFIG_TCC_BACKTRACE
 static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level);
 static void rt_error(ucontext_t *uc, const char *fmt, ...);
-#endif
 static void set_exception_handler(void);
 #endif
 
@@ -797,7 +793,6 @@ static int rt_get_caller_pc(addr_t *paddr, CONTEXT *uc, int level)
 /* ------------------------------------------------------------- */
 #ifdef CONFIG_TCC_STATIC
 
-#ifndef CONFIG_TCC_STATIC_NODLOPEN
 /* dummy function for profiling */
 ST_FUNC void *dlopen(const char *filename, int flag)
 {
@@ -812,7 +807,6 @@ ST_FUNC const char *dlerror(void)
 {
     return "error";
 }
-#endif
 
 typedef struct TCCSyms {
     char *str;

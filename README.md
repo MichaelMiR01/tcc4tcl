@@ -36,3 +36,7 @@ release commit to carry out the upgrade to tinycc 0.9.27.
 The plan is to merge all enhancements committed by rkeene, cyanogilvie, 
 MichaelMiR01 and tcllab into the "tcllab" branch,  which will then be merged 
 into the "master" branch as a new release.
+
+Update 22-06-29: 
+Actually the automated build process fails, the makefile still needs some work as does the configure script
+

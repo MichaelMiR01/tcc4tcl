@@ -23,8 +23,7 @@ TCLCONFIGPATH = @TCLCONFIGPATH@
 TCL_PACKAGE_PATH = @TCL_PACKAGE_PATH@
 tcllibdir = $(shell if echo "$(libdir)" | grep '^UNSPECIFIED' >/dev/null; then echo $(TCL_PACKAGE_PATH); else echo "$(libdir)"; fi)
 PACKAGE_INSTALL_DIR = $(tcllibdir)/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
-TCC_CONFIGURE_OPTS = --cc='$(CC)' --extra-cflags='$(CPPFLAGS) $(CFLAGS) -DSHOBJEXT=@SHOBJEXT@ @TCC_EXTRA_CFLAGS@' --with-tcl=$(TCLCONFIGPATH) @TCC_CONFIGURE_OPTS@
-export TCC_LDFLAGS = @TCC_LDFLAGS@
+TCC_CONFIGURE_OPTS = --cc='$(CC)' --extra-cflags='$(CPPFLAGS) $(CFLAGS) -DSHOBJEXT=@SHOBJEXT@ @TCC_EXTRA_CFLAGS@' --with-tcl=$(TCLCONFIGPATH) --sysincludepaths='{B}/include@HOST_PATH_SEPARATOR@{B}/include/1@HOST_PATH_SEPARATOR@{B}/include/2@HOST_PATH_SEPARATOR@{B}/include/3@HOST_PATH_SEPARATOR@{B}/include/4@HOST_PATH_SEPARATOR@{B}/include/5@HOST_PATH_SEPARATOR@{B}/include/6@HOST_PATH_SEPARATOR@{B}/include/7@HOST_PATH_SEPARATOR@{B}/include/8@HOST_PATH_SEPARATOR@{B}/include/9' --libpaths='{B}/lib' @TCC_CONFIGURE_OPTS@
 INSTALL_HEADERS = tcl.h assert.h ctype.h errno.h float.h limits.h locale.h math.h setjmp.h signal.h stdarg.h stddef.h stdint.h stdio.h stdlib.h string.h time.h wctype.h
 srcdir = @srcdir@
 host_os = @host_os@
@@ -46,14 +45,15 @@ tcc/libtcc.a: tcc/config.h
 tcc/libtcc1.a: tcc/config.h
 	-$(MAKE) -C tcc tcc@EXEEXT@
 	$(MAKE) -C tcc libtcc1.a
-	cp -f tcc/libtcc1.a .
-	cp -rf tcc/include .
 
+libtcc.o: $(srcdir)/tcc/tcc.h $(srcdir)/tcc/libtcc.h tcc/config.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o libtcc.o -c $(srcdir)/tcc/tcc.c 
+	
 tcc4tcl.o: $(srcdir)/tcc4tcl.c $(srcdir)/tcc/tcc.h $(srcdir)/tcc/libtcc.h tcc/config.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o tcc4tcl.o -c $(srcdir)/tcc4tcl.c
 
-tcc4tcl.@SHOBJEXT@: tcc4tcl.o tcc/libtcc.a
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(SHOBJLDFLAGS) -o tcc4tcl.@SHOBJEXT@ tcc4tcl.o tcc/libtcc.a $(LIBS)
+tcc4tcl.@SHOBJEXT@: tcc4tcl.o libtcc.o
+	$(CC) -shared -s -o tcc4tcl.@SHOBJEXT@ tcc4tcl.o libtcc.o $(LIBS)
 	-@WEAKENSYMS@ tcc4tcl.@SHOBJEXT@
 	-@REMOVESYMS@ tcc4tcl.@SHOBJEXT@
 

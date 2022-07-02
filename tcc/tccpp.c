@@ -591,13 +591,13 @@ ST_FUNC int handle_eob(void)
 
     /* only tries to read if really end of buffer */
     if (bf->buf_ptr >= bf->buf_end) {
-        if (bf->fd >= 0) {
+        if (bf->fd !=NULL) {
 #if defined(PARSE_DEBUG)
             len = 1;
 #else
             len = IO_BUF_SIZE;
 #endif
-            len = read(bf->fd, bf->buffer, len);
+            len = Tcl_Read(bf->fd, bf->buffer, len);
             if (len < 0)
                 len = 0;
         } else {
@@ -1842,7 +1842,7 @@ ST_FUNC void preprocess(int is_bof)
                 goto include_done;
             }
 
-            if (tcc_open(s1, buf1) < 0)
+            if (tcc_open(s1, buf1) == NULL)
                 continue;
 
             file->include_next_index = i + 1;
@@ -1960,7 +1960,7 @@ include_done:
                 goto _line_err;
             --n;
         }
-        if (file->fd > 0)
+        if (file->fd != NULL)
             total_lines += file->line_num - n;
         file->line_num = n;
         if (s1->do_debug)

@@ -19,9 +19,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <tcl.h>
+#define USE_TCL_STUBS
 #include <stdlib.h>
+#include <tcl.h>
+#include <tclInt.h>
+
 #include "tcc.h"
+
 
 struct TclTCCState {
 	TCCState *s;
@@ -119,6 +123,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
                 tcc_add_library(s, Tcl_GetString(objv[2]));
                 return TCL_OK;
             }
+            
         case TCC4TCL_ADD_LIBRARY_PATH:
             if (objc != 3) {
                 Tcl_WrongNumArgs(interp, 2, objv, "path");
@@ -255,6 +260,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
             }
             tcc_undefine_symbol(s,Tcl_GetString(objv[2]));
             return TCL_OK;
+        
         default:
             Tcl_Panic("internal error during option lookup");
     }
@@ -266,7 +272,9 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	TCCState *s;
     	int index;
 	static CONST char *types[] = {
-		"memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
+		//"memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
+		// 0.9.26 to 0.9.27 the enum changed
+		"","memory", "exe", "dll", "obj", "preprocess",    (char *) NULL
 	};
 
 	if (objc < 3 || objc > 4) {
@@ -287,23 +295,30 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 		return(TCL_ERROR);
 	}
 
-#ifdef USE_TCL_STUBS
-	if (index == TCC_OUTPUT_MEMORY) {
-		/* Only add this symbol if we are compiling to memory */
-		/*tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);*/
-	}
+	ts = (void *) ckalloc(sizeof(*ts));
+	ts->s = s;
+    ts->relocated = 0;
 
-	/*tcc_define_symbol(s, "USE_TCL_STUBS", "1");*/
-#endif
 
 	tcc_set_error_func(s, interp, (void *)&Tcc4tclErrorFunc);
 
-	ts = (void *) ckalloc(sizeof(*ts));
-	ts->s = s;
-    	ts->relocated = 0;
+#ifdef USE_TCL_STUBS
+	tcc_define_symbol(s, "USE_TCL_STUBS", "1");
+	if (index == TCC_OUTPUT_MEMORY) {
+		/* Only add this symbol if we are compiling to memory */
+		#ifdef TCC_TARGET_PE
+		    // define stubsptr as dllimport symbols to satisfy tcc's needs
+            tcc_define_symbol(s, "tclStubsPtr", "(*_imp__tclStubsPtr)");
+            tcc_define_symbol(s, "tclIntStubsPtr", "(*_imp__tclIntStubsPtr)");
+        #endif
+		tcc_add_symbol(s, "tclStubsPtr", &tclStubsPtr);
+		tcc_add_symbol(s, "tclIntStubsPtr", &tclIntStubsPtr);
+		tcc_add_symbol(s, "Tcl_initStubs", &Tcl_InitStubs);
+	}
+#endif
+	tcc_set_output_type(s,index);
 
 	/*printf("type: %d\n", index); */
-	tcc_set_output_type(s,index);
 	Tcl_CreateObjCommand(interp,Tcl_GetString(objv[objc-1]),Tcc4tclHandleCmd,ts,Tcc4tclCCommandDeleteProc);
 
 	Tcl_SetObjResult(interp, objv[objc-1]);
@@ -319,6 +334,6 @@ int Tcc4tcl_Init(Tcl_Interp *interp) {
 #endif
 
 	Tcl_CreateObjCommand(interp, "tcc4tcl", Tcc4tclCreateCmd, NULL, NULL);
-
+    Tcl_SetVar(interp,  "::TCC_VERSION", TCC_VERSION, 0);
 	return TCL_OK;
 }

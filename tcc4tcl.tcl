@@ -1,23 +1,34 @@
 # tcc.tcl - library routines for the tcc wrapper (Mark Janssen)
-
+# heavily modified by MiR to support TK properly and some debug features
 namespace eval tcc4tcl {
 	variable dir 
 	variable count
-	variable cmdline
-
-	if {![info exists cmdline]} {set cmdline $::argv}
-
+	variable loadedfrom
 	set dir [file dirname [info script]]
-
+	#puts "TCC DIR IS $dir"
 	if {[info command ::tcc4tcl] == ""} {
-		catch { load {} tcc4tcl }
+		catch { 
+		    load {} tcc4tcl 
+		    set loadedfrom "static"
+		}
 	}
 	if {[info command ::tcc4tcl] == ""} {
 		catch {
 			load [file join $dir tcc4tcl[info sharedlibextension]] tcc4tcl
+		    set loadedfrom  "[file join $dir tcc4tcl[info sharedlibextension]]"
+		}
+	}
+	if {[info command ::tcc4tcl] == ""} {
+		catch {
+			load [file join ./ tcc4tcl[info sharedlibextension]] tcc4tcl
+		    set loadedfrom  "[file join ./ tcc4tcl[info sharedlibextension]]"
 		}
 	}
 
+	if {[info command ::tcc4tcl] == ""} {
+	    puts "ERROR: Failed loading tcc4tcl library"
+	    set loadedfrom "-failed-"
+	}
 	set count 0
 
 	proc lookupNamespace {name} {
@@ -36,7 +47,6 @@ namespace eval tcc4tcl {
 	proc new {{output ""} {pkgName ""}} {
 		variable dir
 		variable count
-		variable cmdline
 
 		set handle ::tcc4tcl::tcc_[incr count]
 
@@ -50,8 +60,7 @@ namespace eval tcc4tcl {
 			}
 		}
 
-		array set $handle [list code "" type $type filename $output package $pkgName add_inc_path "" add_lib_path "" add_lib "" add_macros ""]
-		_process_command_line $handle $cmdline
+		array set $handle [list code "" type $type filename $output package $pkgName add_inc_path "" add_lib_path "" add_lib "" add_file "" add_macros ""]
 
 		proc $handle {cmd args} [string map [list @@HANDLE@@ $handle] {
 			set handle {@@HANDLE@@}
@@ -122,6 +131,12 @@ namespace eval tcc4tcl {
 		lappend state(add_lib) {*}$args
 	}
 
+	proc _add_file {handle args} {
+		upvar #0 $handle state
+
+		lappend state(add_file) {*}$args
+	}
+
 	proc _cwrap {handle name adefs rtype} {
 		upvar #0 $handle state
 
@@ -135,6 +150,7 @@ namespace eval tcc4tcl {
 		append state(code) $wrapper "\n"
 
 		lappend state(procs) $name [list $tclname]
+		lappend state(procdefs) $name [list $tclname $rtype $adefs]
 	}
 
 	proc _cproc {handle name adefs rtype {body "#"}} {
@@ -150,6 +166,7 @@ namespace eval tcc4tcl {
 		append state(code) $wrapper "\n"
 
 		lappend state(procs) $name [list $tclname]
+		lappend state(procdefs) $name [list $tclname $rtype $adefs] 
 	}
 
 	proc _ccode {handle code} {
@@ -469,10 +486,45 @@ namespace eval tcc4tcl {
 
 		set code ""
 
+		variable hasTK 0
+
+        #puts "Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
+        switch -glob -- $::tcl_platform(os)-$::tcl_platform(pointerSize) {
+            "Linux-*" {
+                #puts "Linux"
+                $handle add_include_path  "${dir}/include/"
+                $handle add_include_path  "/usr/include/"
+                $handle add_include_path  "/usr/include/x86_64-linux-gnu"
+                $handle add_include_path  "${dir}/include/generic"
+                $handle add_include_path  "${dir}/include/xlib"
+                $handle add_include_path  "${dir}/include/generic/unix"
+                set outfileext so
+                set tclstub tclstub86_64
+                set tkstub tkstub86_64
+                set DLLEXPORT "__attribute__ ((visibility(\"default\")))"
+            }
+            "Windows*" {
+                #puts "Windows"
+                $handle add_include_path  "${dir}/include/"
+                $handle add_include_path  "${dir}/win32"
+                $handle add_include_path  "${dir}/include/generic"
+                $handle add_include_path  "${dir}/include/xlib"
+                $handle add_include_path  "${dir}/win32/winapi"
+                $handle add_include_path  "${dir}/include/generic/win"
+                set outfileext dll
+                set tclstub tclstub86elf
+                set tkstub tkstub86elf
+                set DLLEXPORT "__declspec(dllexport)"
+            }
+            default {
+                puts "Unknow Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
+                return
+            }
+        }
+        
 		foreach {macroName macroVal} $state(add_macros) {
 			append code "#define [string trim "$macroName $macroVal"]\n"
 		}
-
 		append code $state(code) "\n"
 
 		if {$state(type) == "exe" || $state(type) == "dll"} {
@@ -482,11 +534,34 @@ namespace eval tcc4tcl {
 		}
 
 		if {[info exists state(tk)]} {
-			set code "#include <tk.h>\n$code"
+		    if {$hasTK==0&&$state(type) == "memory"&&!$outputOnly} {
+                set hasTK 1
+                set name "tkstart"
+                set adefs {Tcl_Interp* interp}
+                set rtype int
+                set body {
+                    if (Tk_InitStubs(interp, TK_VERSION, 0) == NULL) {
+                        return TCL_ERROR;
+                    }
+                    return 1;
+                }
+                set wrap [uplevel 0 [list ::tcc4tcl::wrap $name $adefs $rtype $body]]
+                set wrapped [lindex $wrap 0]
+                set wrapper [lindex $wrap 1]
+                set tclname [lindex $wrap 2]
+                set code "$code\n\n $wrapped \n $wrapper \n"
+                lappend state(procs) $name [list $tclname]
+             }
+			 set compiletkstubs ""
+			 if {$state(type)=="memory"} {
+			     set compiletkstubs "#include <tkStubLib.c>\n"
+			 }
+			 set code "#define USE_TK_STUBS 1\n#include <tk.h>\n$compiletkstubs\n$code"
 		}
-		set code "#include <tcl.h>\n\n$code"
+		set code "#include <tcl.h>\n$code"
 
 		# Append additional generated code to support the output type
+		#puts "Type is $state(type)";
 		switch -- $state(type) {
 			"memory" {
 				# No additional code needed
@@ -526,13 +601,26 @@ namespace eval tcc4tcl {
 			"package" {
 				set packageName [lindex $state(package) 0]
 				set packageVersion [lindex $state(package) 1]
-				if {$packageVersion == ""} {
-					set packageVersion "0"
+				set tclversion [lindex $state(package) 2]
+				if {$tclversion ne "TCL_VERSION"} {
+				    #quote it out, it's not a macro probably
+				    set tclversion "\"$tclversion\""
 				}
-
+				if {$packageVersion == ""} {
+					set packageVersion "1.0"
+				}
+				append code "#ifndef DLLEXPORT \n"
+				append code "#define DLLEXPORT $DLLEXPORT\n"
+				append code "#endif \n" 
+				append code "DLLEXPORT \n"
 				append code "int [string totitle $packageName]_Init(Tcl_Interp *interp) \{\n"
 				append code "#ifdef USE_TCL_STUBS\n"
-				append code "  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == 0L) \{\n"
+				append code "  if (Tcl_InitStubs(interp, $tclversion, 0) == 0L) \{\n"
+				append code "    return TCL_ERROR;\n"
+				append code "  \}\n"
+				append code "#endif\n"
+				append code "#ifdef USE_TK_STUBS\n"
+				append code "  if (Tk_InitStubs(interp, $tclversion, 0) == 0L) \{\n"
 				append code "    return TCL_ERROR;\n"
 				append code "  \}\n"
 				append code "#endif\n"
@@ -563,6 +651,9 @@ namespace eval tcc4tcl {
 		switch -- $state(type) {
 			"package" {
 				set tcc_type "dll"
+				$handle add_library_path  "${dir}/lib/"
+				$handle add_library $tclstub
+				$handle add_library $tkstub
 			}
 			default {
 				set tcc_type $state(type)
@@ -574,7 +665,7 @@ namespace eval tcc4tcl {
 		}
 
 		::tcc4tcl $dir $tcc_type tcc
-
+		
 		foreach path $state(add_inc_path) {
 			tcc add_include_path $path
 		}
@@ -582,20 +673,28 @@ namespace eval tcc4tcl {
 		foreach path $state(add_lib_path) {
 			tcc add_library_path $path
 		}
+		tcc add_library_path  "${dir}/lib/"
 
 		foreach lib $state(add_lib) {
 			tcc add_library $lib
 		}
 
+		foreach lib $state(add_file) {
+			tcc add_file $lib
+		}
+
 		switch -- $state(type) {
 			"memory" {
-				tcc compile $code
-
-				if {[info exists state(procs)] && [llength $state(procs)] > 0} {
-					foreach {procname cname_obj} $state(procs) {
-						tcc command $procname {*}$cname_obj
-					}
-				}
+                set r [tcc compile $code]
+                if {[string trim $r] ne ""} {
+                    puts "Compile result:\n$r\n"
+                }
+				
+                if {[info exists state(procs)] && [llength $state(procs)] > 0} {
+                    foreach {procname cname_obj} $state(procs) {
+                        tcc command $procname {*}$cname_obj
+                    }
+                }
 			}
 
 			"package" - "dll" - "exe" {
@@ -626,15 +725,40 @@ namespace eval tcc4tcl {
 					}
 				}
 
-				tcc compile $code
+                set r [tcc compile $code]
+                if {[string trim $r] ne ""} {
+                    puts "Compile result:\n$r\n"
+                }
+				
+				foreach lib $state(add_lib) {
+					# this is necessary, since tcc tries to load lib alacarte, so no symbols will be resolved before smth is compolied
+					tcc add_library $lib
+				}
 
-				tcc output_file $state(filename)
+				set outfile [file tail $state(filename)]
+				if {![info exists packageName]} {set packageName "."}
+            			if {$outfile==""} {
+                			set outfile $packageName
+            			}
+
+				set outfile $outfile.$outfileext
+				if {[file isdir $packageName]} {
+					set outfile [file join $packageName/$outfile]
+				}
+				tcc output_file $outfile 
+				rename $handle ""
+				unset $handle
+				return "TCC_COMPILE_OK"
 			}
 		}
 
+		if {$hasTK>0} {
+            tkstart
+        }
 		# Cleanup
 		rename $handle ""
 		unset $handle
+		return "TCC_COMPILE_OK"
 	}
 }
 
@@ -839,7 +963,7 @@ proc ::tcc4tcl::wrap {name adefs rtype {body "#"} {cname ""} {includePrototype 0
 		string         -
 		dstring        { append cbody "  Tcl_SetResult(ip, rv, TCL_DYNAMIC);" "\n" }
 		vstring        { append cbody "  Tcl_SetResult(ip, rv, TCL_VOLATILE);" "\n" }
-		default        { append cbody "  Tcl_SetObjResult(ip, rv); Tcl_DecrRefCount(rv);" "\n" }
+		default        { append cbody "  Tcl_SetObjResult(ip, rv); /*Tcl_DecrRefCount(rv);*/" "\n" }
 	}
 
 	if {$rtype != "ok"} {
@@ -852,5 +976,5 @@ proc ::tcc4tcl::wrap {name adefs rtype {body "#"} {cname ""} {includePrototype 0
 }
 
 namespace eval tcc4tcl {namespace export cproc}
+package provide tcc4tcl "0.30"
 
-package provide tcc4tcl "0.40"
