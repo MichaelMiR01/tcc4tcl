@@ -19,7 +19,10 @@
  */
 
 #include "tcc.h"
-
+#ifndef HAVE_TCL_H
+#include "notcl.h"
+#include "notcl.c"
+#endif
 /********************************************************/
 /* global variables */
 
@@ -770,14 +773,12 @@ LIBTCCAPI TCCState *tcc_new(const char *init_lib_path)
         tcc_set_lib_path(s, init_lib_path);
     }
 
-    s->output_type = TCC_OUTPUT_MEMORY;
+    s->output_type = TCL_OUTPUT_MEMORY;
 
     tccelf_new(s);
     tccpp_new(s);
     
-    //s->include_stack_ptr = s->include_stack;
     s->static_link = 0;
-    //s->rdynamic = 1;
     
     /* we add dummy defines for some special macros to speed up tests
        and to have working defined() */

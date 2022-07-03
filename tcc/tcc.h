@@ -24,6 +24,7 @@
 #define _GNU_SOURCE
 #include "config.h"
 #ifdef HAVE_TCL_H
+#define USE_TCL_STUBS 1
 #  include <tcl.h>
 #endif
 
@@ -38,7 +39,7 @@
 #include <time.h>
 
 #ifndef _WIN32
-/*@ include <unistd.h>*/
+// include <unistd.h>
 # include <sys/time.h>
 # ifndef CONFIG_TCC_STATIC
 #  include <dlfcn.h>
@@ -83,6 +84,8 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #ifndef O_BINARY
 # define O_BINARY 0
 #endif
+
+#include "notcl.h"
 
 #ifndef offsetof
 #define offsetof(type, field) ((size_t) &((type *)0)->field)

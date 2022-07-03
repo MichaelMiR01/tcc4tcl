@@ -47,10 +47,10 @@ tcc/libtcc1.a: tcc/config.h
 	$(MAKE) -C tcc libtcc1.a
 
 libtcc.o: $(srcdir)/tcc/tcc.h $(srcdir)/tcc/libtcc.h tcc/config.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o libtcc.o -c $(srcdir)/tcc/tcc.c 
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DHAVE_TCL_H -o libtcc.o -c $(srcdir)/tcc/tcc.c 
 	
 tcc4tcl.o: $(srcdir)/tcc4tcl.c $(srcdir)/tcc/tcc.h $(srcdir)/tcc/libtcc.h tcc/config.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o tcc4tcl.o -c $(srcdir)/tcc4tcl.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DHAVE_TCL_H -o tcc4tcl.o -c $(srcdir)/tcc4tcl.c
 
 tcc4tcl.@SHOBJEXT@: tcc4tcl.o libtcc.o
 	$(CC) -shared -s -o tcc4tcl.@SHOBJEXT@ tcc4tcl.o libtcc.o $(LIBS)

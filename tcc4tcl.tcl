@@ -488,10 +488,10 @@ namespace eval tcc4tcl {
 
 		variable hasTK 0
 
-        #puts "Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
+        puts "Plattform $::tcl_platform(os)-$::tcl_platform(pointerSize)"
         switch -glob -- $::tcl_platform(os)-$::tcl_platform(pointerSize) {
             "Linux-*" {
-                #puts "Linux"
+                puts "Linux"
                 $handle add_include_path  "${dir}/include/"
                 $handle add_include_path  "/usr/include/"
                 $handle add_include_path  "/usr/include/x86_64-linux-gnu"
@@ -504,7 +504,7 @@ namespace eval tcc4tcl {
                 set DLLEXPORT "__attribute__ ((visibility(\"default\")))"
             }
             "Windows*" {
-                #puts "Windows"
+                puts "Windows"
                 $handle add_include_path  "${dir}/include/"
                 $handle add_include_path  "${dir}/win32"
                 $handle add_include_path  "${dir}/include/generic"
@@ -561,7 +561,7 @@ namespace eval tcc4tcl {
 		set code "#include <tcl.h>\n$code"
 
 		# Append additional generated code to support the output type
-		#puts "Type is $state(type)";
+		puts "Type is $state(type)";
 		switch -- $state(type) {
 			"memory" {
 				# No additional code needed
@@ -651,6 +651,7 @@ namespace eval tcc4tcl {
 		switch -- $state(type) {
 			"package" {
 				set tcc_type "dll"
+				puts "Adding ${dir}/lib/    $tclstub"
 				$handle add_library_path  "${dir}/lib/"
 				$handle add_library $tclstub
 				$handle add_library $tkstub
@@ -685,10 +686,7 @@ namespace eval tcc4tcl {
 
 		switch -- $state(type) {
 			"memory" {
-                set r [tcc compile $code]
-                if {[string trim $r] ne ""} {
-                    puts "Compile result:\n$r\n"
-                }
+                puts [tcc compile $code]
 				
                 if {[info exists state(procs)] && [llength $state(procs)] > 0} {
                     foreach {procname cname_obj} $state(procs) {
@@ -725,10 +723,7 @@ namespace eval tcc4tcl {
 					}
 				}
 
-                set r [tcc compile $code]
-                if {[string trim $r] ne ""} {
-                    puts "Compile result:\n$r\n"
-                }
+				puts [tcc compile $code]
 				
 				foreach lib $state(add_lib) {
 					# this is necessary, since tcc tries to load lib alacarte, so no symbols will be resolved before smth is compolied
@@ -977,4 +972,3 @@ proc ::tcc4tcl::wrap {name adefs rtype {body "#"} {cname ""} {includePrototype 0
 
 namespace eval tcc4tcl {namespace export cproc}
 package provide tcc4tcl "0.30"
-
