@@ -1,5 +1,7 @@
+#ifdef _WIN32
 #ifndef _USE_32BIT_TIME_T
 #define _USE_32BIT_TIME_T 1
+#endif
 #endif
 /*
  * tcl.h --

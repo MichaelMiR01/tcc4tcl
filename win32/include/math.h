@@ -382,7 +382,6 @@ extern "C" {
       "fstp	%%st" : "=t" (res) : "0" (x));
     return res;
   }
-
   __CRT_INLINE long double __cdecl logbl (long double x)
   {
     long double res;
@@ -485,6 +484,7 @@ extern "C" {
     return retval;
   }
 
+#ifdef __TINYC__
   __CRT_INLINE long double __cdecl rintl (long double x)
   {
     long double retval;
@@ -494,7 +494,24 @@ extern "C" {
       "fstt    %0\n" : "=m" (retval) : "m" (x));
     return retval;
   }
-
+#else
+/* When compiling with gcc, always use gcc's builtins.
+ * The asm inlines below are kept here for future reference:
+ * they were written for gcc and do no error handling
+ * (exceptions/errno), therefore only valid if __FAST_MATH__
+ * is defined (-ffast-math) .  */
+#if 0 /*defined(__GNUC__) && defined(__FAST_MATH__)*/
+__CRT_INLINE long double __cdecl rintl (long double x)
+  {
+    long double retval;
+    __asm__ (
+      "fldt    %1\n"
+      "frndint   \n"
+      "fstt    %0\n" : "=m" (retval) : "m" (x));
+    return retval;
+  }
+#endif
+#endif
   /* 7.12.9.5 */
   __CRT_INLINE long __cdecl lrint (double x) 
   {
