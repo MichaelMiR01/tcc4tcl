@@ -3,6 +3,8 @@
 lappend auto_path [lindex $argv 0]
 package require tcc4tcl
 
+catch {console show}
+
 tcc4tcl::cproc test {int i} int { return(i+42); }
 tcc4tcl::cproc test1 {int i} int { return(i+42); }
 tcc4tcl::cproc ::bob::test1 {int i} int { return(i+42); }
@@ -238,4 +240,4 @@ critcl::cproc test14 {int x} int {
 }
 puts "Test14: [test14 3]"
 
-exit 0
+

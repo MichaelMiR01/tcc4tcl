@@ -82,7 +82,9 @@
 #define _X86_ 1
 #define _M_IX86 300 /* Visual Studio */
 #define WIN32 1
-#define _USE_32BIT_TIME_T
+#ifndef _USE_32BIT_TIME_T
+#define _USE_32BIT_TIME_T 1
+#endif
 #ifdef __arm__
 #define __TRY__
 #else
