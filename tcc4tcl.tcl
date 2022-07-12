@@ -603,6 +603,9 @@ namespace eval tcc4tcl {
 				set packageName [lindex $state(package) 0]
 				set packageVersion [lindex $state(package) 1]
 				set tclversion [lindex $state(package) 2]
+				if {$tclversion eq {}} {
+					set tclversion TCL_VERSION
+				}
 				if {$tclversion ne "TCL_VERSION"} {
 				    #quote it out, it's not a macro probably
 				    set tclversion "\"$tclversion\""
@@ -736,7 +739,7 @@ namespace eval tcc4tcl {
 					tcc add_library $lib
 				}
 
-				set outfile [file tail $state(filename)]
+				set outfile [file norm $state(filename)]
 				if {![info exists packageName]} {set packageName "."}
             			if {$outfile==""} {
                 			set outfile $packageName
