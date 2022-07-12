@@ -22,7 +22,7 @@ del pkgIndex.tcl
 setLocal EnableDelayedExpansion
 For /f "tokens=* delims= " %%a in (%topdir%\pkgIndex.tcl.in) do (
 Set str=%%a
-set str=!str:@PACKAGE_VERSION@=0.30!
+set str=!str:@PACKAGE_VERSION@=0.40!
 echo !str!>>pkgIndex.tcl
 )
 ENDLOCAL

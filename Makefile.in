@@ -109,6 +109,7 @@ clean:
 	rm -f tcc4tcl.o
 	rm -f tcc4tcl.@SHOBJEXT@ tcc4tcl-static.a
 	rm -f tcc4tcl.@SHOBJEXT@.a tcc4tcl.@SHOBJEXT@.def
+	rm -f libtcc.o
 	rm -rf __TMP__
 	rm -f TEST-STATUS
 	-$(MAKE) -C tcc distclean
