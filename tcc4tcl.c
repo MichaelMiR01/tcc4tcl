@@ -278,7 +278,7 @@ static int Tcc4tclCreateCmd( ClientData cdata, Tcl_Interp *interp, int objc, Tcl
 	};
 
 	if (objc < 3 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 1, objv, "tcc_libary_path ?output_type? handle");
+		Tcl_WrongNumArgs(interp, 1, objv, "tcc_library_path ?output_type? handle");
 		return TCL_ERROR;
 	}
 

@@ -16,14 +16,9 @@ It is licensed under the terms of the LGPL v2.1 (or later).
 
 ------------------------------
 
-[This repository](https://github.com/tcllab/tcc4tcl) is a fork made in an 
-effort to combine multiple independent contributions to the project and to 
-upgrade the [TinyCC compiler](https://github.com/TinyCC/tinycc) used (0.9.26, 
-released 2013) to the latest release (0.9.27, released 2017)
+The tcc4tcl package allows access from Tcl to TinyCC, a compact, self-contained and portable C preprocessor, compiler, linker and assembler.  As such, it can be an excellent interactive tool for quickly and easily providing C-coded speed enhancements for performance-critical sections of a Tcl program, as well as generally for learning C and prototyping C code.
 
-All independent contributions and the upgraded TinyCC 0.9.27 code have been 
-merged to the "master" branch.  Anyone interested in giving this package a try 
-is encouraged to check out or download this branch.
+On top of that, tcc4tcl adds features that make it easy to create binary package extensions that efficiently use the Tcl C API and stubs interface feature for adding commands to a Tcl interpreter and managing libraries.
 
 ## Quickstart:
 
@@ -65,7 +60,7 @@ In addition to writing and compiling new Tcl commands in C, tcc4tcl can be used
 to wrap existing compiled C functions from a shared or static library file, and 
 call the wrapped functions as Tcl commands.  For example, assuming there exists 
 a shared library **/usr/lib/x86_64-linux-gnu/libcurl.so**, the following can be 
-done:
+done to make the [curl](https://curl.se/) API command "curl_version" callable from Tcl:
 
     % set handle [tcc4tcl::new]
     ::tcc4tcl::tcc_1
@@ -110,6 +105,15 @@ Tcl_PushCallframe/Tcl_PopCallframe, which are Tcl internals.
 
 ## Repository notes
 
+[This repository](https://github.com/tcllab/tcc4tcl) is a fork made in an 
+effort to combine multiple independent contributions to the project and to 
+upgrade the [TinyCC compiler](https://github.com/TinyCC/tinycc) used (0.9.26, 
+released 2013) to the latest release (0.9.27, released 2017)
+
+All independent contributions and the upgraded TinyCC 0.9.27 code have been 
+merged to the "master" branch.  Anyone interested in giving this package a try 
+is encouraged to check out or download this branch.
+
 This repository was forked from [cyanolgivie's 
 fork](https://github.com/cyanogilvie/tcc4tcl) of rkeene's repository.
 
@@ -129,5 +133,4 @@ branch as they are ready.
 [Michael Richter](https://github.com/MichaelMiR01) originated the upgrade 
 effort and is the chief author of the current improvements.
 
-[Steve Huntley](https://wiki.tcl-lang.org/page/Steve+Huntley) provided some 
-assistance and advice.
+[Steve Huntley](https://wiki.tcl-lang.org/page/Steve+Huntley) provided assistance and advice.
