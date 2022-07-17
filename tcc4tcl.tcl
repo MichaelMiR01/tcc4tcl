@@ -77,7 +77,7 @@ namespace eval tcc4tcl {
 			set callcmd ::tcc4tcl::_$cmd
 
 			if {[info command $callcmd] == ""} {
-				return -code error "unknown or ambiguous subcommand \"$cmd\": must be cwrap, ccode, cproc, ccommand, delete, linktclcommand, code, tk, add_include_path, add_library_path, add_library, process_command_line, or go"
+				return -code error "unknown or ambiguous subcommand \"$cmd\": must be cproc, cwrap, ccommand,  proc, ccode, code, linktclcommand, tk, add_include_path, add_library_path, add_library, add_file, process_command_line, delete, or go"
 			}
 
 			uplevel 1 [list $callcmd $handle {*}$args]
@@ -150,7 +150,7 @@ namespace eval tcc4tcl {
 		append state(code) $wrapper "\n"
 
 		lappend state(procs) $name [list $tclname]
-		lappend state(procdefs) $name [list $tclname $rtype $adefs]
+		#lappend state(procdefs) $name [list $tclname $rtype $adefs]
 	}
 
 	proc _cproc {handle name adefs rtype {body "#"}} {
@@ -166,7 +166,7 @@ namespace eval tcc4tcl {
 		append state(code) $wrapper "\n"
 
 		lappend state(procs) $name [list $tclname]
-		lappend state(procdefs) $name [list $tclname $rtype $adefs] 
+		#lappend state(procdefs) $name [list $tclname $rtype $adefs] 
 	}
 
 	proc _ccode {handle code} {
@@ -203,7 +203,7 @@ namespace eval tcc4tcl {
 				}
 				"-U*" {
 					set symbol [string range $cmd 2 end]
-					dict unset state(add_macros) $symbol $val
+					dict unset state(add_macros) $symbol
 				}
 				"-l*" {
 					set library [string range $cmd 2 end]

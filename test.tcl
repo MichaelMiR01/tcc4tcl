@@ -205,18 +205,18 @@ if {$testVal != "4"} {
 	error "\[ClientData\] Invalid value: $testVal, should have been 4"
 }
 
-set handle [tcc4tcl::new]
-$handle cproc testClientData {ClientData _x=3 int y} {int} {
-	int x
-
-	Tcl_GetIntFromObj(NULL, _x, &x);
-
-	return(x + y);
-}
-set testVal [testClientData 1]
-if {$testVal != "4"} {
-	error "\[ClientData\] Invalid value: $testVal, should have been 4"
-}
+# set handle [tcc4tcl::new]
+# $handle cproc testClientData {ClientData _x=3 int y} {int} {
+# 	int x
+# 
+# 	Tcl_GetIntFromObj(NULL, _x, &x);
+# 
+# 	return(x + y);
+# }
+# set testVal [testClientData 1]
+# if {$testVal != "4"} {
+# 	error "\[ClientData\] Invalid value: $testVal, should have been 4"
+# }
 
 set handle [tcc4tcl::new]
 $handle ccommand testCCommand {dummy ip objc objv} {
