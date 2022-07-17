@@ -64,6 +64,7 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 	Tcl_WideInt val;
 	Tcl_Obj *val_o;
 	void *val_p;
+	void *val_p2;
 	int index;
 	int res;
 	struct TclTCCState *ts;
@@ -71,14 +72,15 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 	Tcl_Obj *sym_addr;
 	static CONST char *options[] = {
 		"add_include_path", "add_file",  "add_library", 
-		"add_library_path", "add_symbol", "command", "compile",
+		"add_library_path", "add_symbol", "command", "nrcommand", "compile",
 		"define", "get_symbol", "output_file", "undefine",
 		(char *) NULL
 	};
 	enum options {
 		TCC4TCL_ADD_INCLUDE, TCC4TCL_ADD_FILE, TCC4TCL_ADD_LIBRARY, 
-		TCC4TCL_ADD_LIBRARY_PATH, TCC4TCL_ADD_SYMBOL, TCC4TCL_COMMAND, TCC4TCL_COMPILE,
-		TCC4TCL_DEFINE, TCC4TCL_GET_SYMBOL, TCC4TCL_OUTPUT_FILE, TCC4TCL_UNDEFINE
+		TCC4TCL_ADD_LIBRARY_PATH, TCC4TCL_ADD_SYMBOL, TCC4TCL_COMMAND,
+		TCC4TCL_NRCOMMAND, TCC4TCL_COMPILE, TCC4TCL_DEFINE, TCC4TCL_GET_SYMBOL,
+		TCC4TCL_OUTPUT_FILE, TCC4TCL_UNDEFINE
 	};
 	char *str;
 	int rv;
@@ -183,6 +185,44 @@ static int Tcc4tclHandleCmd ( ClientData cdata, Tcl_Interp *interp, int objc, Tc
 
             /*printf("symbol: %x\n",val); */
             Tcl_CreateObjCommand(interp, Tcl_GetString(objv[2]), val_p, val_o, Tcc4tclDeleteClientData);
+            return TCL_OK;
+        case TCC4TCL_NRCOMMAND:
+	        if (objc != 5 && objc != 6) {
+		    Tcl_WrongNumArgs(interp, 3, objv, "tclname cname nrcname ?clientData?");
+		    return TCL_ERROR;
+	        }
+            
+	        if (!ts->relocated) {
+		    if(tcc_relocate(s, TCC_RELOCATE_AUTO)!=0) {
+		        Tcl_AppendResult(interp, "relocating failed", NULL);
+		        return TCL_ERROR;
+		    } else {
+		        ts->relocated=1;
+		    }
+	        }
+            
+	        val_p = tcc_get_symbol(s, Tcl_GetString(objv[3]));
+	        if (val_p == NULL) {
+		    Tcl_AppendResult(interp, "symbol '", Tcl_GetString(objv[3]),"' not found", NULL);
+		    return TCL_ERROR;
+	        }
+            
+	        val_p2 = tcc_get_symbol(s, Tcl_GetString(objv[4]));
+	        if (val_p2 == NULL) {
+		    Tcl_AppendResult(interp, "symbol '", Tcl_GetString(objv[4]),"' not found", NULL);
+		    return TCL_ERROR;
+	    }
+
+	    /* the ClientData */
+	    if (objc == 6) {
+		val_o = objv[5];
+		Tcl_IncrRefCount(val_o);
+	    } else {
+		val_o = NULL;
+	    }
+
+	        /*printf("symbol: %x\n",val); */
+	        Tcl_NRCreateCommand(interp, Tcl_GetString(objv[2]), val_p, val_p2, val_o, Tcc4tclDeleteClientData);
             return TCL_OK;
         case TCC4TCL_COMPILE:
             if(ts->relocated == 1) {
