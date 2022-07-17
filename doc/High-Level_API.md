@@ -188,11 +188,12 @@ Synopsis:
     $handle code
     
 ### $handle linktclcommand
-Create a Tcl procedure that calls an existing C function.  In the case of 
-compiling to memory, this subcommand uses the **Tcl_CreateObjCommand** Tcl API 
-function to link the C function to a Tcl procedure accessible in the 
-interpreter, so the C function must have the standard arguments and return type 
-expected by that function, as e.g. the **ccommand** subcommand creates.
+Instantiate in the Tcl interpreter a procedure that calls an existing C 
+function.  In the case of compiling to memory, this subcommand uses the
+**Tcl_CreateObjCommand** Tcl API function to make the C function a Tcl procedure
+accessible in the interpreter, so the C function must have the standard
+arguments and return type expected by the Tcl C API, as e.g. the **ccommand**
+subcommand creates.
 
 Synopsis:
 
@@ -221,9 +222,9 @@ Synopsis:
     $handle add_library_path <dir...>
 
 ### $handle add_library
-Link to an additional library.  See TinyCC code for file name patterns that 
-will be recognized as library files.  For example, in the case of shared 
-libraries, "libcurl.so" would be recognized but not "libcurl.so.4".
+Link to an additional library.  See TinyCC code for file name patterns that will
+be recognized as library files.  For example, in the case of shared libraries,
+"libcurl.so" would be recognized but not "libcurl.so.4".
 
 Synopsis:
 
